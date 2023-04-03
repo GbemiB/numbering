@@ -12,8 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.constraints.NotBlank;
 import java.sql.SQLException;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -30,8 +30,8 @@ public class FileStorageController {
 
     @PostMapping(value = "save", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE})
     public List<GenericResponse<?>> save(@NotBlank @RequestParam("file") MultipartFile[] files,
-                                                              @RequestParam("type") String[] type,
-                                                              @NotBlank @RequestParam("applicationId") String applicationId) {
+                                         @RequestParam("type") String[] type,
+                                         @NotBlank @RequestParam("applicationId") String applicationId) {
         log.info("File, type, application id {} {} {} ", files, type, applicationId);
         List<GenericResponse<?>> finalResponse = new ArrayList<>();
         List<DocumentModel> list = new ArrayList<>();
@@ -42,17 +42,17 @@ public class FileStorageController {
             list.add(e);
         }
         log.info("List of document {} ", list);
-            list.forEach(e-> {
-                try {
-                    if (!e.getFile().isEmpty()) {
-                        GenericResponse<?> singleResponse = fileStorageService.uploadFile(e.getFile(), applicationId, e.getDocumentType());
-                        log.info("Single response {} ", singleResponse);
-                        finalResponse.add(singleResponse);
-                    }
-                } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+        list.forEach(e -> {
+            try {
+                if (!e.getFile().isEmpty()) {
+                    GenericResponse<?> singleResponse = fileStorageService.uploadFile(e.getFile(), applicationId, e.getDocumentType());
+                    log.info("Single response {} ", singleResponse);
+                    finalResponse.add(singleResponse);
                 }
-            });
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
         log.info("Final response {} ", finalResponse);
         return finalResponse;
     }
@@ -60,8 +60,8 @@ public class FileStorageController {
 
     @PostMapping(value = "edit", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE})
     public List<GenericResponse<?>> edit(@NotBlank @RequestParam("file") MultipartFile[] files,
-                                                              @RequestParam("type") String[] type,
-                                                              @NotBlank @RequestParam("applicationId") String applicationId) {
+                                         @RequestParam("type") String[] type,
+                                         @NotBlank @RequestParam("applicationId") String applicationId) {
         log.info("File, type, application id {} {} {} ", files, type, applicationId);
         List<GenericResponse<?>> finalResponse = new ArrayList<>();
 
@@ -73,23 +73,34 @@ public class FileStorageController {
             list.add(e);
         }
         log.info("List of document {} ", list);
-            list.forEach(e-> {
-                try {
-                    if (!e.getFile().isEmpty()) {
-                        // delete the file type from data base
+        list.forEach(e -> {
+            try {
+                if (!e.getFile().isEmpty()) {
+                    // check if the document exist
+                    int doesDocumentExist = fileStorageRepository.fileCount(e.getDocumentType(), applicationId);
+                    if (doesDocumentExist >= 1) {
+                        //::::: Document exist :::::::::::
+                        // delete the document record from data base
                         int isDeleted = fileStorageRepository.deleteByFileType(e.getDocumentType(), applicationId);
                         log.info("Delete code {} ", isDeleted);
-                        // re-insert the file
-                        if (isDeleted >= 1){
+                        if (isDeleted >= 1) {
+                            // re-insert the document
                             GenericResponse<?> singleResponse = fileStorageService.uploadFile(e.getFile(), applicationId, e.getDocumentType());
                             log.info("Single response {} ", singleResponse);
                             finalResponse.add(singleResponse);
                         }
+                    } else {
+                        //::::: Document does not exist :::::::::::
+                        // persist the document
+                        GenericResponse<?> singleResponse = fileStorageService.uploadFile(e.getFile(), applicationId, e.getDocumentType());
+                        log.info("Single response {} ", singleResponse);
+                        finalResponse.add(singleResponse);
                     }
-                } catch (SQLException ex) {
-                    log.info("Exception occurred while editing document {} ", ex.getErrorCode());
                 }
-            });
+            } catch (SQLException ex) {
+                log.info("Exception occurred while editing document {} ", ex.getErrorCode());
+            }
+        });
         log.info("Final response {} ", finalResponse);
         return finalResponse;
     }

@@ -18,10 +18,10 @@ public class FileStorageRepository {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    public int fileCount(String fileName, String applicationId) throws SQLException {
-        String sql = "SELECT count(*) FROM FileStorage WHERE FileName=? AND ApplicationId=?";
+    public int fileCount(String fileType, String applicationId) throws SQLException {
+        String sql = "SELECT count(*) FROM FileStorage WHERE FileType=? AND ApplicationId=?";
         return jdbcTemplate.queryForObject(
-                sql, Integer.class, fileName, applicationId);
+                sql, Integer.class, fileType, applicationId);
     }
 
     public int save(FileStorageModel model) throws SQLException {
