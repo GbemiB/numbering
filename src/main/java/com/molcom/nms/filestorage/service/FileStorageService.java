@@ -9,6 +9,7 @@ import com.molcom.nms.filestorage.repository.FileStorageRepository;
 import com.molcom.nms.general.dto.GenericResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,9 @@ public class FileStorageService {
 
     private final Path fileStorageLocation;
     private final FileStorageRepository fileStorageRepository;
+
+    @Value("${file.base.path}")
+    private String fileBasePath;
 
     @Autowired
     public FileStorageService(FileStorageProperties fileStorageProperties, FileStorageRepository fileStorageRepository) {
@@ -59,15 +63,13 @@ public class FileStorageService {
                 genericResponse.setOutputPayload("");
             }
 
-            // store file
             String fileElement = storeFile(file);
-            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                    // dev & uat
-                    // .path("/downloadFile/")
-                    // Live
-                    .path("/nms-api/downloadFile/")
-                    .path(fileElement)
-                    .toUriString();
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append(fileBasePath)
+                    .append("/downloadFile/")
+                    .append(fileElement)
+                    .toString();
+            String fileUrl = stringBuilder.toString();
 
             // save file path to database
             model.setFileName(fileElement)
