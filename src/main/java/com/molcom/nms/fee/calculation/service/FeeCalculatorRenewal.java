@@ -47,8 +47,8 @@ public class FeeCalculatorRenewal {
         List<FeeScheduleModel> listOfFee = feeScheduleRepo.getSpecificFeeSchedule(feeType, numberType, numberSubType);
         FeeScheduleModel model = listOfFee.get(0);
         // Get renewal value for the fee
-        log.info("Fee value renewal {}", model.getRenewableValueType());
-        Integer val = Integer.parseInt(model.getRenewableValueType());
+        log.info("Fee value renewal {}", model.getRenewableType());
+        Integer val = Integer.parseInt(model.getRenewableType());
         return val;
     }
 
@@ -90,7 +90,7 @@ public class FeeCalculatorRenewal {
                     oldAccessFee = getSpecificNewFeeSchedule("ACCESS CODE FEE", "STANDARD", numberSubType);
 
                     if (adminFee != 0 && lineFee != 0 && accessFee != 0 && oldAccessFee != 0) {
-                        finalLineFee = lineFee * 10000;
+                        finalLineFee = lineFee * 1000000 ;
                         finalAccessFee = ((accessFee * oldAccessFee) / 100) / 10; // percentage of old access code fee
                         finalAdminFee = (adminFee * (finalAccessFee + finalLineFee)) / 100;
                         totalRenewalFee = finalAccessFee + finalLineFee + finalAdminFee;

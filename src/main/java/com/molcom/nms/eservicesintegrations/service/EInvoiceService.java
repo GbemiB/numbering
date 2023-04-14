@@ -133,8 +133,8 @@ public class EInvoiceService {
     public Integer getSpecificRenewalFeeSchedule(String feeType, String numberType, String numberSubType) throws SQLException {
         List<FeeScheduleModel> listOfFee = feeScheduleRepo.getSpecificFeeSchedule(feeType, numberType, numberSubType);
         FeeScheduleModel model = listOfFee.get(0);
-        log.info("Fee value renewal {}", model.getRenewableValueType());
-        Integer val = Integer.parseInt(model.getRenewableValueType());
+        log.info("Fee value renewal {}", model.getRenewableType());
+        Integer val = Integer.parseInt(model.getRenewableType());
         return val;
     }
 
@@ -395,14 +395,23 @@ public class EInvoiceService {
                                     if (Objects.equals(numSubTypeVariable, "NATIONAL")) {
                                         cov = "National";
                                         finalLineFee = lineFee * 1000000;
-                                    } else {
+                                        finalAccessFee = ((accessFee * oldAccessFee) / 100) / 10; // percentage of old access code fee
+                                        finalAdminFee = (adminFee * (finalAccessFee + finalLineFee)) / 100;
+                                        total = finalAccessFee + finalLineFee + finalAdminFee;
+
+                                    } else  if (Objects.equals(numSubTypeVariable, "GEOGRAPHICAL")){
                                         cov = coverageArea;
                                         finalLineFee = lineFee * 10000;
+                                        finalAccessFee = (accessFee * oldAccessFee) / 100; // percentage of old access code fee
+                                        finalAdminFee = (adminFee * (finalAccessFee + finalLineFee)) / 100;
+                                        total = finalAccessFee + finalLineFee + finalAdminFee;
+                                    } else{
+                                        // toll free and vanity
+                                        finalLineFee = lineFee * 10000;
+                                        finalAccessFee = ((accessFee * oldAccessFee) / 100) / 10; // percentage of old access code fee
+                                        finalAdminFee = (adminFee * (finalAccessFee + finalLineFee)) / 100;
+                                        total = finalAccessFee + finalLineFee + finalAdminFee;
                                     }
-
-                                    finalAccessFee = (accessFee * oldAccessFee) / 100; // percentage of old access code fee
-                                    finalAdminFee = (adminFee * (finalAccessFee + finalLineFee)) / 100;
-                                    total = finalAccessFee + finalLineFee + finalAdminFee;
                                     log.info("New allocation fee is {} ", total);
 
 

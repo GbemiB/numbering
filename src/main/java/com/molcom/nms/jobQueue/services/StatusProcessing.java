@@ -41,11 +41,9 @@ public class StatusProcessing {
      */
     public boolean processFailedInvoice(InvoiceNotificationPayload invoiceNotificationPayload,
                                         InvoiceModel invoiceModel) throws Exception {
-
-        // step 2: delete from notification queue
-        boolean isDeleted = eInvoiceService.deleteFromNotificationQueue(invoiceNotificationPayload.getReceiptHandle());
-        log.info("Invoice deleted from notification pull {} for invoice id {} ", isDeleted, invoiceModel.getInvoiceId());
-
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, String> data = mapper.readValue(invoiceNotificationPayload.getBody(), Map.class);
+        String invoiceStatus = data.get("invoiceStatus");
 
         // step 1: Update the invoice status to failed
         int updatePaymentStatus = genericTableUpdateRepository.updateTableColumn(
@@ -67,6 +65,20 @@ public class StatusProcessing {
         );
         log.info("Invoice IsInvoiceResolvedByEservices status update for invoice number {} is {} : ",
                 invoiceModel.getInvoiceNumber(), updateResolvedStatus);
+
+        // step 3: Check if application is in renewal table to know if it for renewal, update payment status to count
+        int count = numRenewalRepository.countIfNoExist(invoiceModel.getApplicationId());
+        if (count >= 1) {
+            int updateRenewalStatus = genericTableUpdateRepository.updateTableColumn(
+                    "NumberRenewal",
+                    "PaymentStatus",
+                    invoiceStatus,
+                    "ApplicationId",
+                    invoiceModel.getApplicationId()
+            );
+            log.info("Invoice payment status is updated for renewal application {} status is {} : ",
+                    invoiceModel.getApplicationId(), updateRenewalStatus);
+        }
 
         return updatePaymentStatus >= 1;
 
@@ -108,6 +120,7 @@ public class StatusProcessing {
         ObjectMapper mapper = new ObjectMapper();
         Map<String, String> data = mapper.readValue(invoiceNotificationPayload.getBody(), Map.class);
         String invoiceNumber = data.get("invoiceNumber");
+        String invoiceStatus = data.get("invoiceStatus");
 
         if (invoiceNumber != null) {
             int updateInvoiceNumber = genericTableUpdateRepository.updateTableColumn(
@@ -132,10 +145,6 @@ public class StatusProcessing {
                 "PAID");
         log.info("Allocation status updated for application id {} with invoice number {} is : {} ",
                 invoiceModel.getApplicationId(), invoiceModel.getInvoiceNumber(), updateAllocationPayment);
-
-        // step 5: delete from notification queue
-        boolean isDeleted = eInvoiceService.deleteFromNotificationQueue(invoiceNotificationPayload.getReceiptHandle());
-        log.info("Invoice deleted from notification pull {} for invoice id {} ", isDeleted, invoiceModel.getInvoiceId());
 
         // step 6: Update `IsInvoiceResolvedByEservices` flag to `TRUE` in table `Invoice`
         // so it's processing will stop
@@ -179,6 +188,7 @@ public class StatusProcessing {
         ObjectMapper mapper = new ObjectMapper();
         Map<String, String> data = mapper.readValue(invoiceNotificationPayload.getBody(), Map.class);
         String invoiceNumber = data.get("invoiceNumber");
+        String invoiceStatus = data.get("invoiceStatus");
 
         if (invoiceNumber != null) {
             int updateInvoiceNumber = genericTableUpdateRepository.updateTableColumn(
@@ -188,6 +198,21 @@ public class StatusProcessing {
                     "InvoiceId",
                     invoiceModel.getInvoiceId()
             );
+
+            // step 2: Check if application is in renewal table to know if it for renewal, update payment status to count
+            int count = numRenewalRepository.countIfNoExist(invoiceModel.getApplicationId());
+            if (count >= 1) {
+                int updateRenewalStatus = genericTableUpdateRepository.updateTableColumn(
+                        "NumberRenewal",
+                        "PaymentStatus",
+                        invoiceStatus,
+                        "ApplicationId",
+                        invoiceModel.getApplicationId()
+                );
+                log.info("Invoice payment status is updated for renewal application {} status is {} : ",
+                        invoiceModel.getApplicationId(), updateRenewalStatus);
+            }
+
             // NOTE: Don't delete invoice since it's still processing
             return updateInvoiceNumber >= 1;
 

@@ -119,16 +119,17 @@ public class InvoiceProcessor {
                     Map<String, String> data = null;
                     try {
                         data = mapper.readValue(q.getBody(), Map.class);
-                        String invoiceIdVal = data.get("invoiceId");
-                        String invoiceStatus = data.get("invoiceStatus");
+                        String invoiceIdVal = data.get("invoiceId") != null ? data.get("invoiceId") : "";
+                        String invoiceStatus = data.get("invoiceStatus") != null ? data.get("invoiceStatus") : "";
+                        String receiptHandle = data.get("ReceiptHandle") != null ? data.get("ReceiptHandle") : "";
 
                         log.info("Invoice id from eservices {} ", invoiceIdVal);
+                        log.info("Receipt Handle from eservices {} ", receiptHandle);
                         log.info("Invoice id kept in db  {} ", invoiceIdDb);
 
                         log.info("Invoice status {} ", invoiceStatus);
 
                         if (Objects.equals(invoiceIdVal, invoiceIdDb)) {
-
                             if (invoiceStatus != null) {
                                 if (Objects.equals(invoiceStatus, "FAILED")) {
                                     try {
@@ -156,6 +157,11 @@ public class InvoiceProcessor {
                                         log.info("Eservices invoice response {} ", updateEServicestatusOne);
                                         log.info("Eservices invoice response {} ", updateEServicestatusTwo);
 
+                                        // Delete from notification queue
+                                        boolean isDeleted = eInvoiceService.deleteFromNotificationQueue(receiptHandle);
+                                        log.info("Invoice deleted from notification pull {} for invoice id {} because status is {} ",
+                                                isDeleted, invoiceIdVal, invoiceStatus);
+
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                     }
@@ -165,7 +171,13 @@ public class InvoiceProcessor {
                                     try {
                                         // PROCESS FOR PAID
                                         boolean status = statusProcessing.processSuccessInvoice(q, notResolvedVal);
-                                        log.info("Status for failed invoice processing {} ", status);
+                                        log.info("Status for paid invoice processing {} ", status);
+
+                                        // Delete from notification queue
+                                        boolean isDeleted = eInvoiceService.deleteFromNotificationQueue(receiptHandle);
+                                        log.info("Invoice deleted from notification pull {} for invoice id {} because status is {} ",
+                                                isDeleted, invoiceIdVal, invoiceStatus);
+
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                     }
@@ -197,6 +209,7 @@ public class InvoiceProcessor {
                                         );
                                         log.info("Eservices invoice response {} ", updateEServicestatusOne);
                                         log.info("Eservices invoice response {} ", updateEServicestatusTwo);
+
 
                                         // Update the application status to the status returned from eservices
                                         boolean statusUpdate = statusProcessing.updateAllocationPayment(notResolvedVal.getApplicationId(),

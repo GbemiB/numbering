@@ -101,8 +101,8 @@
         </dependency>
     </dependencies>
     <build>
-<!--       <finalName>ROOT</finalName>-->
-        <finalName>nms-api</finalName>
+       <finalName>ROOT</finalName>
+<!--        <finalName>nms-api</finalName>-->
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
